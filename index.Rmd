@@ -3,6 +3,7 @@ title: "What Makes a District Map Fair?"
 author: Betsy McCall
 subtitle: Un-gerrymandering district maps
 output: github_document
+always_allow_html: true
 ---
 
 # Introduction

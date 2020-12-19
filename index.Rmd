@@ -1,94 +1,96 @@
 ---
-title: "My Final Project Template"
-author: Your name here
-subtitle: Subtitle here if desired
+title: "What Makes a District Map Fair?"
+author: Betsy McCall
+subtitle: Un-gerrymandering district maps
+output: github_document
+always_allow_html: true
 ---
 
 # Introduction
 
-[~ 200 words]
-
-Clearly stated background and questions / hypotheses / problems being addressed. Sets up the analysis in an interesting and compelling way.
+Gerrymandering has been going on longer than the Republic, and long before there was a name for it. District maps are drawn by those in power to maintain that power. Preserving incumbency has always been an important motivator, and with the rise of political parties, maintaining party control is also important to the legislatures drawing the maps. Various methods have been developed, including cracking and packing, to produce the legislature's desired results. But while those in power are happy with this situation, voters would prefer fair maps that were capable of reflecting the preferences of the voters, including as they change from election to election. But the methods to thwart gerrymandering have had almost no research to determine what actually works. Some methods like compactness, have been proposed, but even researchers in the field note in the literature this gap in their knowledge even as they design technical solutions for creating maps.  The goal here, therefore, will be to examine the fairness of current district maps and to determine if compactness could be a viable solution to the fairness question.
 
 # Materials and methods
 
-[~ 200 words]
+This project will rely primarily on data from two sources:
 
-Narrative: Clear narrative description of the data sources and methods. Includes data from at least two sources that were integrated / merged in R.
+[United States Congressional District Shapefiles](http://cdmaps.polisci.ucla.edu/) and [MIT Election Data](https://electionlab.mit.edu/data).  
 
-Code: The code associated with the project is well organized and easy to follow. Demonstrates mastery of R graphics and functions.
+The Congressional district shape files go back to 1789. MIT's election data seems to only go back to 1976, but this will be enough for an initial start.  From the shapefiles we can calculate area and perimeter of the districts which will go into our calculation of compactness.  We can probably also use the area of the districts as a proxy for relative density since Congressional districts have to have about the same number of seats during the time period to be considered. The election data will have to be joined to the shapefiles to determine the winners of the elections. 
 
-Data: The underlying data are publicly accessible via the web and downloaded/accessed within the Rmd script. If you want to use your own data, you must make it available on a website (e.g. Figshare) so that others are able to re-run your code.
+Maps can be produced compare the statewide winning party (based on vote totals), and compared to the outcomes by seats in the Congressional delegation to determine how closely (or not) that they align. A larger deviance, would suggest worse gerrymandering.  
 
-You can do bullets like this:
+And finally, classification and regression methods will be employed to determine if some of the proposed definitions for compactness actually correlate to fairer district outcomes.
 
-* The first most important thing
-* The second most important thing
-* The third most important thing
+Code: Working on it!
 
-You can do numbers like this:
+Data: Available in the links above.
 
-1. The first most important thing
-2. The second most important thing
-3. The third most important thing
-
-See [http://rmarkdown.rstudio.com/](http://rmarkdown.rstudio.com/) for all the amazing things you can do.
 
 
 Here's my first code chunk.
-```{r}
-1+2
+```{r, include=TRUE, echo=FALSE}
+#load libraries
+library(sf)
+library(tidyverse)
+library(ggmap)
+library(spData)
+library(readr)
+library(rmarkdown)
+data(us_states)
 ```
 
-Load any required packages in a code chunk (you may need to install some packages):
 
-```{r, message=F, warning=F}
-library(tidyverse)
-library(leaflet)
-library(kableExtra)
-knitr::opts_chunk$set(cache=TRUE)  # cache the results for quick compiling
+## Download and clean all required data
+
+Load the data, and strip out the states with only one Congressional district. Also, the election results are filtered to the same states and only for the 113th Congress (election year 2012).
+
+
+
+```{r, message=F, warning=F, include=TRUE,echo=FALSE}
+URL113 <- "http://cdmaps.polisci.ucla.edu/shp/districts113.zip"
+URL114 <- "http://cdmaps.polisci.ucla.edu/shp/districts114.zip"
+
+tdir=tempdir()
+download.file(URL113,destfile=file.path(tdir,"districts113.zip"))
+unzip(file.path(tdir,"districts113.zip"),exdir = tdir)
+list.files(tdir)
+district113_data <- read_sf(list.files(tdir,"districtShapes",full.names = T))
+#data source: https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/IG0UN2
+X1976_2018_house3 <- read_csv("docs/1976-2018-house3.csv")
+
 ```
 
 ## Download and clean all required data
-```{r}
-n=20
-data=data.frame(x=runif(n,-180,180),
-                y=runif(n,-60,60),
-                size = runif(n, 5, 20),
-                category = factor(
-                  sample(letters[1:5], n, replace = TRUE)
-                  ),
-                value = rnorm(n))
+
+```{r,include=TRUE,echo=TRUE}
+`%notin%` <- Negate(`%in%`)
+no_singles113 <- district113_data %>% filter(STATENAME %notin% c("Alaska","Wyoming","Montana","South Dakota","North Dakota","Vermont","Delaware")) %>% mutate(state=toupper(STATENAME))
+
+elect113 <- X1976_2018_house3 %>% filter(year==2012) %>% filter(state %notin% c("ALASKA","WYOMING","MONTANA","SOUTH DAKOTA","NORTH DAKOTA","VERMONT","DELAWARE"))
+
 ```
 
-```{r, results='asis'}
-data %>% 
-  slice(1:10) %>% #show only 1:n rows
-  kable(digits=2,align="c")%>% #make table and round to two digits
-  kable_styling(bootstrap_options = 
-                  c("striped", "hover", "condensed", "responsive")) #apply other formatting
+We can make a map of the districts. And data sets have to be joined to colorize the map.
+
+```{r, results='asis',include=TRUE,echo=FALSE}
+ggplot() + geom_sf(data=us_states) + geom_sf(data = no_singles113) + coord_sf()
 ```
 
 Add any additional processing steps here.
 
 # Results
 
-[~200 words]
+Coming soon!
 
-Tables and figures (maps and other graphics) are carefully planned to convey the results of your analysis. Intense exploration and evidence of many trials and failures. The author looked at the data in many different ways before coming to the final presentation of the data.
 
-Show tables, plots, etc. and describe them.
 
-```{r, fig.width=6, fig.height=3, fig.cap="Map of completely random data"}
-m <- leaflet(data) %>% 
-  addTiles() %>% 
-  addCircleMarkers(~x, ~y, radius = ~size,color = ~as.factor(category)) %>% 
-  addPopups(~x[2], ~y[2], "Random popup")
-m  # a map with the default OSM tile layer
+```{r, fig.width=6, fig.height=3, fig.cap="Map of completely random data", include=FALSE,echo=FALSE}
+
 ```
 
 
-```{r}
+```{r,include=FALSE,echo=FALSE}
 data %>% 
   ggplot(aes(x=x,y=y,col=category))+
   geom_point()
@@ -96,10 +98,12 @@ data %>%
 
 # Conclusions
 
-[~200 words]
-
-Clear summary adequately describing the results and putting them in context. Discussion of further questions and ways to continue investigation.
+coming soon
 
 # References
 
-All sources are cited in a consistent manner
+[1] 	J. B. Lewis, B. DeVine, L. Pritcher and K. C. Martis, "United States Congressional District Shapefiles," 2013. [Online]. Available: http://cdmaps.polisci.ucla.edu/. [Accessed 1 December 2020].
+[2] 	"MIT Election Data and Science Lab," 2 December 2020. [Online]. Available: https://electionlab.mit.edu/data. [Accessed 6 December 2020].
+[3] 	J. Suzuki, Constitutional Calculus: The Math of Justice and the Myth of Common Sense, Baltimore: Johns Hopkins University Press, 2015.
+
+[Project Proposal](http://betsymccall.net/edu/CDSE/coding/R/Project_Proposal.html)

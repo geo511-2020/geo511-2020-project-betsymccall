@@ -29,38 +29,52 @@ Data: Available in the links above.
 
 
 Here's my first code chunk.
-```{r, include=FALSE, echo=FALSE}
-1+2
+```{r, include=TRUE, echo=FALSE}
+#load libraries
+library(sf)
+library(tidyverse)
+library(ggmap)
+library(spData)
+library(readr)
+library(rmarkdown)
+data(us_states)
 ```
 
-R code will come later.  All hiding now.
 
-```{r, message=F, warning=F, include=FALSE,echo=FALSE}
-library(tidyverse)
-library(leaflet)
-library(kableExtra)
-knitr::opts_chunk$set(cache=FALSE)  # cache the results for quick compiling
+## Download and clean all required data
+
+Load the data, and strip out the states with only one Congressional district. Also, the election results are filtered to the same states and only for the 113th Congress (election year 2012).
+
+
+
+```{r, message=F, warning=F, include=TRUE,echo=FALSE}
+URL113 <- "http://cdmaps.polisci.ucla.edu/shp/districts113.zip"
+URL114 <- "http://cdmaps.polisci.ucla.edu/shp/districts114.zip"
+
+tdir=tempdir()
+download.file(URL113,destfile=file.path(tdir,"districts113.zip"))
+unzip(file.path(tdir,"districts113.zip"),exdir = tdir)
+list.files(tdir)
+district113_data <- read_sf(list.files(tdir,"districtShapes",full.names = T))
+#data source: https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/IG0UN2
+X1976_2018_house3 <- read_csv("docs/1976-2018-house3.csv")
+
 ```
 
 ## Download and clean all required data
 
-```{r,include=FALSE,echo=FALSE}
-n=20
-data=data.frame(x=runif(n,-180,180),
-                y=runif(n,-60,60),
-                size = runif(n, 5, 20),
-                category = factor(
-                  sample(letters[1:5], n, replace = TRUE)
-                  ),
-                value = rnorm(n))
+```{r,include=TRUE,echo=TRUE}
+`%notin%` <- Negate(`%in%`)
+no_singles113 <- district113_data %>% filter(STATENAME %notin% c("Alaska","Wyoming","Montana","South Dakota","North Dakota","Vermont","Delaware")) %>% mutate(state=toupper(STATENAME))
+
+elect113 <- X1976_2018_house3 %>% filter(year==2012) %>% filter(state %notin% c("ALASKA","WYOMING","MONTANA","SOUTH DAKOTA","NORTH DAKOTA","VERMONT","DELAWARE"))
+
 ```
 
-```{r, results='asis',include=FALSE,echo=FALSE}
-data %>% 
-  slice(1:10) %>% #show only 1:n rows
-  kable(digits=2,align="c")%>% #make table and round to two digits
-  kable_styling(bootstrap_options = 
-                  c("striped", "hover", "condensed", "responsive")) #apply other formatting
+We can make a map of the districts. And data sets have to be joined to colorize the map.
+
+```{r, results='asis',include=TRUE,echo=FALSE}
+ggplot() + geom_sf(data=us_states) + geom_sf(data = no_singles113) + coord_sf()
 ```
 
 Add any additional processing steps here.
@@ -72,11 +86,7 @@ Coming soon!
 
 
 ```{r, fig.width=6, fig.height=3, fig.cap="Map of completely random data", include=FALSE,echo=FALSE}
-m <- leaflet(data) %>% 
-  addTiles() %>% 
-  addCircleMarkers(~x, ~y, radius = ~size,color = ~as.factor(category)) %>% 
-  addPopups(~x[2], ~y[2], "Random popup")
-m  # a map with the default OSM tile layer
+
 ```
 
 
@@ -92,5 +102,8 @@ coming soon
 
 # References
 
-All sources are cited in a consistent manner
+[1] 	J. B. Lewis, B. DeVine, L. Pritcher and K. C. Martis, "United States Congressional District Shapefiles," 2013. [Online]. Available: http://cdmaps.polisci.ucla.edu/. [Accessed 1 December 2020].
+[2] 	"MIT Election Data and Science Lab," 2 December 2020. [Online]. Available: https://electionlab.mit.edu/data. [Accessed 6 December 2020].
+[3] 	J. Suzuki, Constitutional Calculus: The Math of Justice and the Myth of Common Sense, Baltimore: Johns Hopkins University Press, 2015.
+
 [Project Proposal](http://betsymccall.net/edu/CDSE/coding/R/Project_Proposal.html)
